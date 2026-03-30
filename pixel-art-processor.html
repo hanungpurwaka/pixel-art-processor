@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Art Processor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1200px;
+            width: 100%;
+            padding: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1000px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section h2 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        /* Upload Section */
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            background: #e8edff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+
+        .upload-area p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .upload-area strong {
+            display: block;
+            color: #667eea;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn.secondary {
+            background: #e0e0e0;
+            color: #333;
+            margin-left: 10px;
+        }
+
+        .btn.secondary:hover {
+            background: #d0d0d0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Preview Section */
+        .preview-container {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 300px;
+            background: #fafafa;
+            position: relative;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 100%;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+        }
+
+        .placeholder {
+            color: #999;
+            font-size: 14px;
+        }
+
+        /* Info Section */
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #333;
+            font-family: monospace;
+            font-weight: 600;
+        }
+
+        .info-value.warning {
+            color: #ff8c00;
+        }
+
+        /* Controls Section */
+        .controls {
+            background: #f8f9ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+        }
+
+        .control-input {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        input[type="number"],
+        input[type="range"] {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: monospace;
+            min-width: 80px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            padding: 0;
+            height: 6px;
+            cursor: pointer;
+        }
+
+        .detection-score {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .detection-score.low {
+            color: #ff8c00;
+        }
+
+        /* Button Row */
+        .button-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .button-row .btn {
+            flex: 1;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        /* Warning Box */
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            color: #856404;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .warning-box.show {
+            display: block;
+        }
+
+        /* Comparison Mode */
+        .comparison-view {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .comparison-view.show {
+            display: grid;
+        }
+
+        .comparison-item h3 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .comparison-item .preview-container {
+            height: 250px;
+        }
+
+        /* Explanations */
+        .explanations {
+            background: #f0f4ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+            border-left: 4px solid #667eea;
+        }
+
+        .explanations h3 {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .explanations p {
+            font-size: 13px;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+
+        .explanations p:last-child {
+            margin-bottom: 0;
+        }
+
+        .explanations strong {
+            color: #333;
+        }
+
+        /* Hidden Elements */
+        #sourceCanvas, #targetCanvas, #previewCanvas, img[style*="display: none"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Pixel Art Processor</h1>
+        <div class="subtitle">
+            Detect and fix enlarged pixel art • Restore true 1px resolution • Download crisp PNG
+        </div>
+
+        <div class="layout">
+            <!-- Left Column: Upload & Original -->
+            <div class="section">
+                <h2>Original Image</h2>
+                
+                <div class="upload-area" id="uploadArea">
+                    <strong>📤 Upload Image</strong>
+                    <p>Drag and drop your pixel art image here,<br>or click to browse</p>
+                    <button class="btn">Choose File</button>
+                    <input type="file" id="fileInput" accept="image/*">
+                </div>
+
+                <div class="info-row" style="margin-top: 20px; display: none;" id="infoOriginal">
+                    <span class="info-label">Dimensions:</span>
+                    <span class="info-value" id="originalDims">0 × 0 px</span>
+                </div>
+
+                <div class="preview-container" style="margin-top: 15px; display: none;" id="previewOriginal">
+                    <span class="placeholder">Loading...</span>
+                </div>
+            </div>
+
+            <!-- Right Column: Controls & Corrected -->
+            <div class="section">
+                <h2>Processing</h2>
+
+                <div class="controls" style="display: none;" id="controlsSection">
+                    <div class="control-group">
+                        <label class="control-label">📊 Detected Scale Factor</label>
+                        <div class="control-input">
+                            <input type="number" id="detectedScale" min="1" max="32" step="1" value="4">
+                            <span style="color: #666; font-size: 14px;">×</span>
+                        </div>
+                        <div class="detection-score" id="detectionScore"></div>
+                        <div class="warning-box" id="warningBox"></div>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">✏️ Manual Override</label>
+                        <div class="control-input">
+                            <input type="range" id="scaleSlider" min="1" max="16" value="4">
+                            <input type="number" id="scaleInput" min="1" max="32" step="1" value="4">
+                            <span style="color: #666; font-size: 14px;">×</span>
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label class="control-label">Output Dimensions</label>
+                        <div class="info-value" id="outputDims" style="font-size: 14px;">0 × 0 px</div>
+                        <div style="font-size: 12px; color: #666; margin-top: 4px;" id="reductionInfo"></div>
+                    </div>
+                </div>
+
+                <div class="button-row" style="display: none;" id="buttonRow">
+                    <button class="btn" id="processBtn">✨ Generate Pixel-Perfect</button>
+                    <button class="btn secondary" id="compareBtn">🔄 Compare</button>
+                    <button class="btn secondary" id="downloadBtn">⬇️ Download PNG</button>
+                    <button class="btn secondary" id="resetBtn">↺ Reset</button>
+                </div>
+
+                <div class="preview-container" style="margin-top: 15px; display: none;" id="previewCorrected">
+                    <span class="placeholder">Click "Generate Pixel-Perfect" to process</span>
+                </div>
+
+                <div class="info-row" style="margin-top: 15px; display: none;" id="infoCorrected">
+                    <span class="info-label">Processed:</span>
+                    <span class="info-value" id="processedDims">0 × 0 px</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison View -->
+        <div class="comparison-view" id="comparisonView">
+            <div class="comparison-item">
+                <h3>Original (Enlarged)</h3>
+                <div class="preview-container" id="comparisonOriginal" style="height: 250px;"></div>
+            </div>
+            <div class="comparison-item">
+                <h3>Corrected (1px Resolution)</h3>
+                <div class="preview-container" id="comparisonCorrected" style="height: 250px;"></div>
+            </div>
+        </div>
+
+        <!-- Information -->
+        <div class="explanations">
+            <h3>How Detection Works</h3>
+            <p>
+                This tool analyzes your image to find the <strong>pixel scale factor</strong>—how much the original 
+                pixel art was enlarged. It tests common scales (2×, 3×, 4×, 5×, 6×, 8×, 10×, 12×, 16×) and scores 
+                each one based on <strong>uniformity</strong>: how many pixels in uniform square blocks exist at that scale.
+            </p>
+            <p>
+                A higher score means the scale is likely correct. If the score is low, your image may not be uniform 
+                pixel art, or the true scale wasn't tested. <strong>Use the manual override</strong> to try different scales.
+            </p>
+            <p>
+                Once you set the scale factor, the corrected image is generated using <strong>nearest-neighbor sampling</strong>—
+                taking exactly 1 pixel from each block. No blurring, interpolation, or color averaging is applied.
+            </p>
+        </div>
+    </div>
+
+    <!-- Hidden canvases and images for processing -->
+    <canvas id="sourceCanvas"></canvas>
+    <canvas id="targetCanvas"></canvas>
+    <canvas id="previewCanvas"></canvas>
+    <img id="previewImg" style="display: none;">
+
+    <script>
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        // STATE
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        let sourceImage = null;
+        let sourceImageData = null;
+        let processedImageData = null;
+        let currentScale = 4;
+        let detectionScore = null;
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        // DOM ELEMENTS
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewOriginal = document.getElementById('previewOriginal');
+        const previewCorrected = document.getElementById('previewCorrected');
+        const controlsSection = document.getElementById('controlsSection');
+        const buttonRow = document.getElementById('buttonRow');
+        const infoOriginal = document.getElementById('infoOriginal');
+        const infoCorrected = document.getElementById('infoCorrected');
+        const detectedScaleInput = document.getElementById('detectedScale');
+        const scaleSlider = document.getElementById('scaleSlider');
+        const scaleInput = document.getElementById('scaleInput');
+        const processBtn = document.getElementById('processBtn');
+        const compareBtn = document.getElementById('compareBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const sourceCanvas = document.getElementById('sourceCanvas');
+        const targetCanvas = document.getElementById('targetCanvas');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const previewImg = document.getElementById('previewImg');
+        const warningBox = document.getElementById('warningBox');
+        const comparisonView = document.getElementById('comparisonView');
+        const comparisonOriginal = document.getElementById('comparisonOriginal');
+        const comparisonCorrected = document.getElementById('comparisonCorrected');
+        const detectionScore_el = document.getElementById('detectionScore');
+        const originalDims = document.getElementById('originalDims');
+        const outputDims = document.getElementById('outputDims');
+        const reductionInfo = document.getElementById('reductionInfo');
+        const processedDims = document.getElementById('processedDims');
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        // UPLOAD HANDLERS
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        function setupUploadHandlers() {
+            uploadArea.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => handleFileSelect(e.target.files[0]));
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                handleFileSelect(e.dataTransfer.files[0]);
+            });
+        }
+
+        function handleFileSelect(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                alert('Please select a valid image file.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.onload = () => {
+                    loadImage(previewImg);
+                };
+                previewImg.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        // IMAGE LOADING
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        function loadImage(img) {
+            sourceImage = img;
+            const width = img.naturalWidth;
+            const height = img.naturalHeight;
+
+            // Draw to canvas and get pixel data
+            sourceCanvas.width = width;
+            sourceCanvas.height = height;
+            const ctx = sourceCanvas.getContext('2d', { willReadFrequently: true });
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(img, 0, 0);
+            sourceImageData = ctx.getImageData(0, 0, width, height);
+
+            // Update UI
+            originalDims.textContent = `${width} × ${height} px`;
+            infoOriginal.style.display = 'flex';
+            previewOriginal.innerHTML = '';
+            previewOriginal.style.display = 'flex';
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const canvasCtx = canvas.getContext('2d', { willReadFrequently: true });
+            canvasCtx.imageSmoothingEnabled = false;
+            canvasCtx.putImageData(sourceImageData, 0, 0);
+            previewOriginal.appendChild(canvas);
+
+            // Detect scale
+            detectScale(sourceImageData, width, height);
+
+            // Show controls
+            controlsSection.style.display = 'block';
+            buttonRow.style.display = 'flex';
+            processedImageData = null;
+            previewCorrected.innerHTML = '<span class="placeholder">Click "Generate Pixel-Perfect" to process</span>';
+            infoCorrected.style.display = 'none';
+            comparisonView.classList.remove('show');
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        // SCALE DETECTION
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        function detectScale(imageData, width, height) {
+            const candidateScales = [2, 3, 4, 5, 6, 8, 10, 12, 16];
+            const scores = {};
+
+            // Score all candidates (remainder pixels are okay)
+            candidateScales.forEach((scale) => {
+                scores[scale] = scoreScale(imageData, width, height, scale);
+            });
+
+            // Find best scale
+            let bestScale = candidateScales[0];
+            let bestScore = scores[bestScale];
+
+            candidateScales.forEach((scale) => {
+                if (scores[scale] > bestScore) {
+                    bestScore = scores[scale];
+                    bestScale = scale;
+                }
+            });
+
+            detectionScore = bestScore;
+            currentScale = bestScale;
+
+            // Display results
+            detectedScaleInput.value = bestScale;
+            updateScaleInputs(bestScale);
+
+            const percentage = Math.round(bestScore * 100);
+            detectionScore_el.textContent = `Confidence: ${percentage}%`;
+
+            if (bestScore < 0.5) {
+                warningBox.textContent = 'Confidence is low. The image may not be uniform pixel art. Try manual override.';
+                warningBox.classList.add('show');
+                detectionScore_el.classList.add('low');
+            } else {
+                warningBox.classList.remove('show');
+                detectionScore_el.classList.remove('low');
+            }
+        }
+
+        function scoreScale(imageData, width, height, scale) {
+            const data = imageData.data;
+            const blockWidth = Math.floor(width / scale);
+            const blockHeight = Math.floor(height / scale);
+            let uniformBlockCount = 0;
+
+            // Check each complete block (ignore remainder pixels at edges)
+            for (let by = 0; by < blockHeight; by++) {
+                for (let bx = 0; bx < blockWidth; bx++) {
+                    // Get reference color (top-left of block)
+                    const refIdx = (by * scale * width + bx * scale) * 4;
+                    const refR = data[refIdx];
+                    const refG = data[refIdx + 1];
+                    const refB = data[refIdx + 2];
+                    const refA = data[refIdx + 3];
+
+                    let isUniform = true;
+
+                    // Check all pixels in block
+                    for (let py = 0; py < scale && isUniform; py++) {
+                        for (let px = 0; px < scale && isUniform; px++) {
+                            const idx = ((by * scale + py) * width + bx * scale + px) * 4;
+                            if (
+                                data[idx] !== refR ||
+                                data[idx + 1] !== refG ||
+                                data[idx + 2] !== refB ||
+                                data[idx + 3] !== refA
+                            ) {
+                                isUniform = false;
+                            }
+                        }
+                    }
+
+                    if (isUniform) {
+                        uniformBlockCount++;
+                    }
+                }
+            }
+
+            // Avoid division by zero for very small images
+            const totalBlocks = Math.max(1, blockWidth * blockHeight);
+            return uniformBlockCount / totalBlocks;
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        // SCALE INPUT SYNC
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        function updateScaleInputs(scale) {
+            scaleSlider.value = scale;
+            scaleInput.value = scale;
+            currentScale = scale;
+            updateOutputDimensions();
+        }
+
+        scaleSlider.addEventListener('input', (e) => {
+            updateScaleInputs(parseInt(e.target.value));
+        });
+
+        scaleInput.addEventListener('change', (e) => {
+            const scale = parseInt(e.target.value) || 1;
+            updateScaleInputs(Math.max(1, Math.min(32, scale)));
+        });
+
+        function updateOutputDimensions() {
+            if (!sourceImage) return;
+            const newWidth = Math.floor(sourceImage.naturalWidth / currentScale);
+            const newHeight = Math.floor(sourceImage.naturalHeight / currentScale);
+            outputDims.textContent = `${newWidth} × ${newHeight} px`;
+            const reduction = Math.round((1 - (newWidth * newHeight) / (sourceImage.naturalWidth * sourceImage.naturalHeight)) * 100);
+            reductionInfo.textContent = `${reduction}% size reduction`;
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        // PROCESSING
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        processBtn.addEventListener('click', () => {
+            if (!sourceImage || !sourceImageData) {
+                alert('Please upload an image first.');
+                return;
+            }
+
+            const scale = parseInt(scaleInput.value) || currentScale;
+            processImage(scale);
+        });
+
+        function processImage(scale) {
+            const srcWidth = sourceImageData.width;
+            const srcHeight = sourceImageData.height;
+            const dstWidth = Math.floor(srcWidth / scale);
+            const dstHeight = Math.floor(srcHeight / scale);
+
+            // Create target image data
+            targetCanvas.width = dstWidth;
+            targetCanvas.height = dstHeight;
+            const ctx = targetCanvas.getContext('2d', { willReadFrequently: true });
+            ctx.imageSmoothingEnabled = false;
+            processedImageData = ctx.createImageData(dstWidth, dstHeight);
+
+            const srcData = sourceImageData.data;
+            const dstData = processedImageData.data;
+
+            // Nearest-neighbor downsampling
+            for (let y = 0; y < dstHeight; y++) {
+                for (let x = 0; x < dstWidth; x++) {
+                    // Sample from the first pixel of each block (top-left)
+                    const srcX = x * scale;
+                    const srcY = y * scale;
+                    const srcIdx = (srcY * srcWidth + srcX) * 4;
+                    const dstIdx = (y * dstWidth + x) * 4;
+
+                    dstData[dstIdx] = srcData[srcIdx];         // R
+                    dstData[dstIdx + 1] = srcData[srcIdx + 1]; // G
+                    dstData[dstIdx + 2] = srcData[srcIdx + 2]; // B
+                    dstData[dstIdx + 3] = srcData[srcIdx + 3]; // A
+                }
+            }
+
+            ctx.putImageData(processedImageData, 0, 0);
+
+            // Display result
+            previewCorrected.innerHTML = '';
+            previewCorrected.style.display = 'flex';
+            const canvas = document.createElement('canvas');
+            canvas.width = dstWidth;
+            canvas.height = dstHeight;
+            const canvasCtx = canvas.getContext('2d', { willReadFrequently: true });
+            canvasCtx.imageSmoothingEnabled = false;
+            canvasCtx.putImageData(processedImageData, 0, 0);
+            previewCorrected.appendChild(canvas);
+
+            processedDims.textContent = `${dstWidth} × ${dstHeight} px`;
+            infoCorrected.style.display = 'flex';
+
+            // Clear comparison view
+            comparisonView.classList.remove('show');
+        }
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        // DOWNLOAD
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        downloadBtn.addEventListener('click', () => {
+            if (!processedImageData) {
+                alert('Please generate the pixel-perfect version first.');
+                return;
+            }
+
+            targetCanvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'pixel-art-corrected.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 'image/png');
+        });
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        // COMPARE
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        compareBtn.addEventListener('click', () => {
+            if (!processedImageData) {
+                alert('Please generate the pixel-perfect version first.');
+                return;
+            }
+
+            comparisonView.classList.add('show');
+
+            // Original
+            comparisonOriginal.innerHTML = '';
+            const origCanvas = document.createElement('canvas');
+            origCanvas.width = sourceImageData.width;
+            origCanvas.height = sourceImageData.height;
+            const origCtx = origCanvas.getContext('2d', { willReadFrequently: true });
+            origCtx.imageSmoothingEnabled = false;
+            origCtx.putImageData(sourceImageData, 0, 0);
+            comparisonOriginal.appendChild(origCanvas);
+
+            // Corrected
+            comparisonCorrected.innerHTML = '';
+            const corrCanvas = document.createElement('canvas');
+            corrCanvas.width = processedImageData.width;
+            corrCanvas.height = processedImageData.height;
+            const corrCtx = corrCanvas.getContext('2d', { willReadFrequently: true });
+            corrCtx.imageSmoothingEnabled = false;
+            corrCtx.putImageData(processedImageData, 0, 0);
+            comparisonCorrected.appendChild(corrCanvas);
+        });
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        // RESET
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        resetBtn.addEventListener('click', () => {
+            sourceImage = null;
+            sourceImageData = null;
+            processedImageData = null;
+            fileInput.value = '';
+
+            previewOriginal.innerHTML = '<span class="placeholder">Loading...</span>';
+            previewOriginal.style.display = 'none';
+            previewCorrected.innerHTML = '<span class="placeholder">Click "Generate Pixel-Perfect" to process</span>';
+            previewCorrected.style.display = 'none';
+            controlsSection.style.display = 'none';
+            buttonRow.style.display = 'none';
+            infoOriginal.style.display = 'none';
+            infoCorrected.style.display = 'none';
+            comparisonView.classList.remove('show');
+            warningBox.classList.remove('show');
+            detectionScore_el.textContent = '';
+        });
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        // INITIALIZATION
+        ////////////////////////////////////////////////////////////////////////////////////////////////
+        setupUploadHandlers();
+    </script>
+</body>
+</html>
